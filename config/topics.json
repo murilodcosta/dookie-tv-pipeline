@@ -1,0 +1,79 @@
+{
+  "topics": [
+    {
+      "id": "trending_dances",
+      "name": "Trending Dances",
+      "description": "Fun, easy animal mascot dance moves"
+    },
+    {
+      "id": "numbers_1_to_10",
+      "name": "Numbers (Count 1 to 10)",
+      "description": "Counting objects or jumps together from 1 to 10"
+    },
+    {
+      "id": "colors",
+      "name": "Colors",
+      "description": "Identifying bright colors with objects and shapes"
+    },
+    {
+      "id": "animal_sounds",
+      "name": "Animal Sounds",
+      "description": "Guessing and making silly animal sounds"
+    },
+    {
+      "id": "daily_routines",
+      "name": "Daily Routines",
+      "description": "Brushing teeth, taking a bath, eating healthy snacks, sleep time"
+    },
+    {
+      "id": "basic_emotions",
+      "name": "Basic Emotions",
+      "description": "Happy, sleepy, surprised, excited mascot reactions"
+    },
+    {
+      "id": "abc_letters",
+      "name": "ABC / Letters",
+      "description": "Fun letter sounds and simple words"
+    },
+    {
+      "id": "shapes",
+      "name": "Shapes",
+      "description": "Circles, stars, squares, and triangles"
+    },
+    {
+      "id": "hygiene",
+      "name": "Hygiene",
+      "description": "Washing hands, washing face, clean up time"
+    },
+    {
+      "id": "family_and_friends",
+      "name": "Family and Friends",
+      "description": "Sharing, helping out, playing together"
+    },
+    {
+      "id": "nature",
+      "name": "Nature",
+      "description": "Sun, rain, rainbow, trees, and flowers"
+    }
+  ],
+  "mascots": [
+    {
+      "id": "dookie",
+      "name": "Dookie",
+      "species": "Boxer Dog",
+      "color": "Tan with dark muzzle mask"
+    },
+    {
+      "id": "mia",
+      "name": "Mia",
+      "species": "White Cat",
+      "color": "Bright white fur, sapphire blue eyes"
+    },
+    {
+      "id": "carrot",
+      "name": "Carrot",
+      "species": "Orange Rabbit",
+      "color": "Light apricot / orange fur"
+    }
+  ]
+}
