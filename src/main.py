@@ -64,20 +64,20 @@ def run_pipeline():
     logger.info(f"✨ Selected Mascot: '{mascot}', Topic: '{topic}'")
 
     # 3. Generate Script & Metadata (3.1)
-    script = script_gen.generate_script(topic=topic, mascot=mascot)
+    script = script_gen.generate_script(topic=topic, mascot=mascot, mock_mode=mock_mode)
     logger.info(f"📝 Script generated: '{script.title}' with {len(script.scenes)} scenes.")
 
     # 4. Generate Media Assets (3.2 & 3.3)
     generated_video_clips = []
     generated_audio_clips = []
     
+    mascot_asset_path = media_gen.get_mascot_asset(mascot)
+    
     for scene in script.scenes:
-        img_path = f"data/output/temp/scene_{scene.scene_number}.png"
         video_path = f"data/output/temp/scene_{scene.scene_number}.mp4"
         audio_path = f"data/output/temp/scene_{scene.scene_number}.mp3"
 
-        media_gen.generate_image(prompt=scene.image_prompt, output_path=img_path)
-        media_gen.animate_video(image_path=img_path, prompt=scene.image_prompt, output_path=video_path)
+        media_gen.animate_video(image_path=mascot_asset_path, prompt=scene.animation_prompt, output_path=video_path)
         editor.generate_narration(text=scene.narration_text, output_audio_path=audio_path)
 
         generated_video_clips.append(video_path)

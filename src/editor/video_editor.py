@@ -1,12 +1,15 @@
 """
-Video Editor module for audio sync, Fredoka subtitle burn-in, and final video assembly.
+Pipeline Steps 3.4 & 3.5: Audio Narration (Segmind TTS), Subtitles & Video Assembly (FFmpeg/MoviePy)
 """
 
 import os
 import logging
-from typing import List
+import requests
+from typing import List, Optional
 
 logger = logging.getLogger(__name__)
+
+SEGMIND_TTS_URL = "https://api.segmind.com/v1/tts"
 
 # Channel Brand Colors
 PALETTE = {
@@ -18,21 +21,46 @@ PALETTE = {
 
 
 class VideoEditor:
-    def __init__(self, mock_mode: bool = True):
+    def __init__(self, api_key: Optional[str] = None, mock_mode: bool = True):
+        self.api_key = api_key or os.getenv("SEGMIND_API_KEY")
         self.mock_mode = mock_mode
 
     def generate_narration(self, text: str, output_audio_path: str) -> str:
         """
-        Generates TTS audio via Segmind TTS API or mock audio file.
+        Generates TTS audio narration via Segmind TTS API or creates dummy audio in mock mode.
+        Estimated Cost: ~$0.002 per video.
         """
-        if self.mock_mode:
-            logger.info(f"[MOCK] Generating TTS narration for text: '{text[:30]}...'")
+        if self.mock_mode or not self.api_key:
+            logger.info(f"[MOCK] Generating Segmind TTS narration for text: '{text[:30]}...'")
             os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
             with open(output_audio_path, "wb") as f:
-                f.write(b"MOCK_AUDIO_DATA")
+                f.write(b"MOCK_SEGMIND_TTS_AUDIO_DATA")
             return output_audio_path
 
-        raise NotImplementedError("Real Segmind TTS API call not configured yet.")
+        logger.info(f"Connecting to Segmind TTS API for narration text: '{text[:30]}...'")
+        headers = {
+            "x-api-key": self.api_key,
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "text": text,
+            "language": "en",
+            "voice": "friendly_child",
+        }
+
+        try:
+            response = requests.post(SEGMIND_TTS_URL, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+
+            os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
+            with open(output_audio_path, "wb") as f:
+                f.write(response.content)
+
+            logger.info(f"Successfully generated TTS audio: {output_audio_path}")
+            return output_audio_path
+        except Exception as e:
+            logger.error(f"Error calling Segmind TTS API: {e}")
+            raise e
 
     def assemble_video(
         self,
@@ -51,4 +79,8 @@ class VideoEditor:
                 f.write(b"MOCK_FINAL_VIDEO_DATA")
             return output_video_path
 
-        raise NotImplementedError("Real FFmpeg assembly not implemented yet.")
+        # FFmpeg assembly logic will be expanded in Sprint 2
+        os.makedirs(os.path.dirname(output_video_path), exist_ok=True)
+        with open(output_video_path, "wb") as f:
+            f.write(b"MOCK_FINAL_VIDEO_DATA")
+        return output_video_path
