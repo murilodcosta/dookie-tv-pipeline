@@ -80,7 +80,7 @@ def run_pipeline():
         video_path = f"data/output/temp/scene_{scene.scene_number}.mp4"
         audio_path = f"data/output/temp/scene_{scene.scene_number}.mp3"
 
-        media_gen.animate_video(image_path=mascot_asset_path, prompt=scene.animation_prompt, output_path=video_path)
+        media_gen.animate_video(image_path=mascot_asset_path, prompt=scene.animation_prompt, output_path=video_path, mascot=mascot)
         audio_path, tts_cost = editor.generate_narration(text=scene.narration_text, output_audio_path=audio_path)
         segmind_tts_cost += tts_cost
 

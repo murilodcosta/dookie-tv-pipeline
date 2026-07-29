@@ -1,13 +1,13 @@
 """
 Pipeline Steps 3.2 & 3.3: Media Generator using Fixed Mascot Assets & Segmind Seedance 2.0 API.
-Note: Fixed mascot images are stored in assets/mascots/ and animated into clips using Segmind Seedance 2.0.
+Note: Fixed mascot reference images are uploaded to Cloudflare R2 and passed via reference_images array to Segmind.
 """
 
 import os
-import base64
 import logging
 import requests
-from typing import Optional
+from typing import Optional, List
+from src.storage.r2_client import CloudflareR2Client
 
 logger = logging.getLogger(__name__)
 
@@ -18,33 +18,68 @@ class MediaGenerator:
     def __init__(self, api_key: Optional[str] = None, mock_mode: bool = True):
         self.api_key = api_key or os.getenv("SEGMIND_API_KEY")
         self.mock_mode = mock_mode
+        self.r2_client = CloudflareR2Client(mock_mode=mock_mode)
+
+    def get_mascot_reference_urls(self, mascot: str) -> List[str]:
+        """
+        Ensures mascot character and character-sheets PNG images are uploaded to R2 and returns their public URLs.
+        Segmind Seedance 2.0 expects array of reference image URLs in payload parameter 'reference_images'.
+        """
+        mascot_clean = mascot.lower().strip()
+        local_char = f"assets/mascots/{mascot_clean}-character.png"
+        local_sheet = f"assets/mascots/{mascot_clean}-character-sheets.png"
+
+        # Account ID for Cloudflare R2 public / endpoint URL format
+        account_id = os.getenv("R2_ACCOUNT_ID", "62200b61d954c569c2a0b1b147f08397")
+        bucket_name = os.getenv("R2_BUCKET_NAME", "dookie-tv-assets")
+
+        urls = []
+        for key, local_file in [("character.png", local_char), ("character-sheets.png", local_sheet)]:
+            r2_dest_key = f"mascots/{mascot_clean}-{key}"
+            if os.path.exists(local_file) and not self.mock_mode:
+                try:
+                    uploaded_url = self.r2_client.upload_file(local_file, r2_dest_key)
+                    urls.append(uploaded_url)
+                except Exception as err:
+                    logger.warning(f"Failed to upload {local_file} to R2: {err}")
+                    fallback_url = f"https://{account_id}.r2.cloudflarestorage.com/{bucket_name}/{r2_dest_key}"
+                    urls.append(fallback_url)
+            else:
+                fallback_url = f"https://{account_id}.r2.cloudflarestorage.com/{bucket_name}/{r2_dest_key}"
+                urls.append(fallback_url)
+
+        logger.info(f"Mascot '{mascot}' reference URLs for Segmind Seedance 2.0: {urls}")
+        return urls
 
     def get_mascot_asset(self, mascot: str) -> str:
         """
-        Retrieves the fixed pre-generated mascot reference asset path from assets/mascots/.
+        Retrieves the fixed pre-generated mascot reference asset path locally.
         """
         mascot_clean = mascot.lower().strip()
         candidates = [
             f"assets/mascots/{mascot_clean}-character.png",
             f"assets/mascots/{mascot_clean}.png",
             f"assets/{mascot_clean}-character.png",
-            f"assets/{mascot_clean}.png",
         ]
         
         for candidate in candidates:
             if os.path.exists(candidate):
-                logger.info(f"Using mascot reference asset: '{candidate}'")
                 return candidate
         
-        fallback_path = candidates[0]
-        logger.warning(f"Mascot asset not found for '{mascot}'. Defaulting to '{fallback_path}'")
-        return fallback_path
+        return candidates[0]
 
-    def animate_video(self, image_path: str, prompt: str, output_path: str, force_recreate: bool = False) -> str:
+    def animate_video(
+        self,
+        image_path: str,
+        prompt: str,
+        output_path: str,
+        mascot: str = "dookie",
+        force_recreate: bool = False,
+    ) -> str:
         """
-        Animates a mascot reference image into a 9:16 vertical video clip via Segmind Seedance 2.0.
-        Includes local caching (re-uses existing video if downstream step fails to avoid wasting API credits).
-        Enforces 3D Pixar animated cartoon style to prevent realistic animal output.
+        Animates mascot reference images into a 9:16 vertical video clip via Segmind Seedance 2.0.
+        Uses exact 'reference_images' array payload structure with public R2 image URLs.
+        Includes local caching (re-uses existing video if file exists on disk).
         """
         # LOCAL CACHE CHECK: Never spend credits to re-generate if valid video file exists on disk!
         if os.path.exists(output_path) and os.path.getsize(output_path) > 100000 and not force_recreate:
@@ -59,37 +94,37 @@ class MediaGenerator:
                 f.write(b"MOCK_SEGMIND_SEEDANCE_VIDEO_DATA")
             return output_path
 
-        logger.info(f"Connecting to Segmind Seedance 2.0 API for animation (Full HD 1080p)...")
+        logger.info(f"Connecting to Segmind Seedance 2.0 API for mascot '{mascot}' (Full HD 1080p)...")
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",
         }
-        
-        # Prepare image input: convert local file to data URI / base64 if needed
-        image_input = image_path
-        if os.path.exists(image_path):
-            with open(image_path, "rb") as img_f:
-                b64_data = base64.b64encode(img_f.read()).decode("utf-8")
-                image_input = f"data:image/png;base64,{b64_data}"
 
-        # Enforce 3D Pixar Animated Cartoon style prefix so Seedance never outputs realistic animals!
-        styled_prompt = (
-            "3D Pixar animated cartoon style, stylized cute 3D mascot character identical to reference image, "
-            "bright vibrant children's animation, smooth 3D render, NOT realistic photo, NO real live-action animals. "
-            f"{prompt}"
-        )
+        # Retrieve public R2 URLs for reference_images array
+        ref_image_urls = self.get_mascot_reference_urls(mascot)
 
-        # Segmind Seedance 2.0 payload parameters
+        # Enforce image reference in prompt text so Seedance binds character visual identity from image 1 and image 2!
+        if "image 1" not in prompt.lower():
+            styled_prompt = (
+                f"{mascot.capitalize()}, the mascot character from image 1 and image 2, "
+                "is in 3D Pixar animated cartoon style, stylized cute 3D character, smooth 3D render, NOT realistic photo, NO real live-action animals. "
+                f"{prompt}"
+            )
+        else:
+            styled_prompt = prompt
+
+        # Segmind Seedance 2.0 EXACT payload parameters
         payload = {
             "prompt": styled_prompt,
-            "image": image_input,
-            "aspect_ratio": "9:16",
             "duration": 10,
+            "resolution": "720p",
+            "aspect_ratio": "9:16",
             "generate_audio": False,
+            "reference_images": ref_image_urls,
         }
 
         try:
-            # Set 300s (5 min) timeout for video rendering on Segmind servers
+            logger.info(f"Sending Segmind Seedance 2.0 Payload with reference_images: {ref_image_urls}")
             response = requests.post(SEGMIND_SEEDANCE_URL, headers=headers, json=payload, timeout=300)
             if response.status_code != 200:
                 logger.error(f"Segmind API returned HTTP {response.status_code}: {response.text}")
