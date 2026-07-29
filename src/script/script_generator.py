@@ -47,12 +47,18 @@ class ScriptGenerator:
             "Rule 4: Produce EXACTLY 1 continuous one-shot scene per video (10 to 12 seconds total duration).\n"
             "Rule 5: Mascots NEVER speak human words. Dookie (dog) makes barks/woofs; Mia (cat) makes meows/purrs; Carrot (rabbit) makes squeaks/crunching. Narration text is spoken ONLY by an off-screen friendly child narrator voice.\n"
             "Rule 6: Animation prompt MUST start by referencing image 1 and image 2 (e.g. '[Mascot], the mascot character from image 1 and image 2, is sitting happily...'), mandating 3D Pixar animated cartoon style, smooth 3D render, NO realistic photo animals.\n"
-            "Rule 7: Output valid JSON ONLY adhering to the requested schema."
+            "Rule 7: Audio Prompt Details: Describe the full audio track clearly inside animation_prompt:\n"
+            "  - Spoken Narration: Off-screen friendly child narrator voice speaking the narration text.\n"
+            "  - Background Music: Upbeat, cheerful children's background music playing softly throughout.\n"
+            "  - Mascot SFX: Mascot makes species-specific animal SFX (barks/meows/squeaks). NO mascot human words.\n"
+            "Rule 8: Output valid JSON ONLY adhering to the requested schema."
         )
 
     def _build_user_prompt(self, topic: str, mascot: str) -> str:
         clean_topic = topic.replace("_", " ")
         mascot_cap = mascot.capitalize()
+        sfx_desc = "happy barks and puppy woofs" if mascot.lower() == "dookie" else ("sweet meows and purrs" if mascot.lower() == "mia" else "soft squeaks and carrot crunching")
+
         return (
             f"Generate a continuous one-shot Short script featuring mascot '{mascot_cap}' teaching/demonstrating topic '{clean_topic}'.\n"
             "Respond ONLY with a JSON object containing the following keys:\n"
@@ -63,8 +69,8 @@ class ScriptGenerator:
             '  "scenes": [\n'
             "    {\n"
             '      "scene_number": 1,\n'
-            '      "animation_prompt": "Shot 1: ' + mascot_cap + ', the mascot character from image 1 and image 2, is sitting happily in a bright colorful room with a sunshine yellow background (#FFD166). ' + mascot_cap + ' waves excitedly with a big smile while demonstrating ' + clean_topic + '. Smooth 3D Pixar animation, cute 3D character style.",\n'
-            '      "narration_text": "Short 2-4 word sentence narration spoken by friendly off-screen child voice",\n'
+            '      "animation_prompt": "Shot 1: ' + mascot_cap + ', the mascot character from image 1 and image 2, is sitting happily in a bright colorful room with a sunshine yellow background (#FFD166). ' + mascot_cap + ' waves excitedly with a big smile while demonstrating ' + clean_topic + '. Audio: Off-screen friendly child voice narrates clearly: \'Look! ' + mascot_cap + ' learns ' + clean_topic + '!\'. Background Music: Upbeat cheerful children\'s background music playing consistently throughout. Mascot SFX: ' + mascot_cap + ' makes ' + sfx_desc + '. Smooth 3D Pixar animation, cute 3D character style.",\n'
+            '      "narration_text": "Look! ' + mascot_cap + ' learns ' + clean_topic + '!",\n'
             '      "duration_seconds": 10.0\n'
             "    }\n"
             "  ]\n"
@@ -97,20 +103,22 @@ class ScriptGenerator:
         """
         clean_topic = topic.replace("_", " ")
         topic_tag = topic.replace("_", "")
+        mascot_cap = mascot.capitalize()
+        sfx_desc = "happy barks and puppy woofs" if mascot.lower() == "dookie" else ("sweet meows and purrs" if mascot.lower() == "mia" else "soft squeaks and carrot crunching")
 
         if mock_mode or not self.api_key:
             logger.info(f"[MOCK] ScriptGenerator: Generating one-shot mock script for mascot '{mascot}' & topic '{topic}'")
             mock_script = ShortScript(
-                title=f"{mascot.capitalize()} Learns {clean_topic.capitalize()}! 🎨 #learning #{topic_tag}",
-                description=f"Join {mascot.capitalize()} on Dookie Tv as we learn about {clean_topic}! #{topic_tag} #learning #kids #shorts #dookietv",
+                title=f"{mascot_cap} Learns {clean_topic.capitalize()}! 🎨 #learning #{topic_tag}",
+                description=f"Join {mascot_cap} on Dookie Tv as we learn about {clean_topic}! #{topic_tag} #learning #kids #shorts #dookietv",
                 tags=["kids", "shorts", "learning", mascot.lower(), topic.lower()],
                 mascot=mascot,
                 topic=topic,
                 scenes=[
                     ScenePrompt(
                         scene_number=1,
-                        animation_prompt=f"Shot 1: {mascot.capitalize()}, the mascot character from image 1 and image 2, is sitting happily in a bright colorful room with a sunshine yellow background (#FFD166). {mascot.capitalize()} smiles and demonstrates {clean_topic}. Smooth 3D Pixar animation, cute 3D character style.",
-                        narration_text=f"Hello friends! Today {mascot} learns {clean_topic}!",
+                        animation_prompt=f"Shot 1: {mascot_cap}, the mascot character from image 1 and image 2, is sitting happily in a bright colorful room with a sunshine yellow background (#FFD166). {mascot_cap} smiles and demonstrates {clean_topic}. Audio: Off-screen friendly child voice narrates: 'Look! {mascot_cap} learns {clean_topic}!'. Background Music: Upbeat cheerful children's background music playing consistently throughout. Mascot SFX: {mascot_cap} makes {sfx_desc}. Smooth 3D Pixar animation, cute 3D character style.",
+                        narration_text=f"Look! {mascot_cap} learns {clean_topic}!",
                         duration_seconds=10.0,
                     ),
                 ],
@@ -156,18 +164,18 @@ class ScriptGenerator:
                 scenes = [
                     ScenePrompt(
                         scene_number=1,
-                        animation_prompt=f"Shot 1: {mascot.capitalize()}, the mascot character from image 1 and image 2, is dancing happily and teaching {clean_topic}. Smooth 3D Pixar animation, cute 3D character style.",
+                        animation_prompt=f"Shot 1: {mascot_cap}, the mascot character from image 1 and image 2, is dancing happily and teaching {clean_topic}. Audio: Off-screen friendly child voice narrates: 'Let's learn {clean_topic}!'. Background Music: Upbeat cheerful children's background music. Mascot SFX: {mascot_cap} makes {sfx_desc}. Smooth 3D Pixar animation, cute 3D character style.",
                         narration_text=f"Let's learn {clean_topic} together!",
                         duration_seconds=10.0,
                     )
                 ]
 
-            raw_title = parsed_json.get("title", f"{mascot.capitalize()} Short")
+            raw_title = parsed_json.get("title", f"{mascot_cap} Short")
             clean_title = raw_title.replace("| Dookie Tv", "").replace("| Dookie TV", "").strip()
 
             script = ShortScript(
                 title=clean_title,
-                description=parsed_json.get("description", f"Join {mascot.capitalize()} for fun learning! #{topic_tag} #learning #kids #shorts #dookietv"),
+                description=parsed_json.get("description", f"Join {mascot_cap} for fun learning! #{topic_tag} #learning #kids #shorts #dookietv"),
                 tags=parsed_json.get("tags", ["kids", "shorts", "learning"]),
                 mascot=mascot,
                 topic=topic,

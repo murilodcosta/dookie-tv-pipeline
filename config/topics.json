@@ -1,11 +1,6 @@
 {
   "topics": [
     {
-      "id": "trending_dances",
-      "name": "Trending Dances",
-      "description": "Fun, easy animal mascot dance moves"
-    },
-    {
       "id": "numbers_1_to_10",
       "name": "Numbers (Count 1 to 10)",
       "description": "Counting objects or jumps together from 1 to 10"

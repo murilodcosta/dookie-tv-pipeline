@@ -119,7 +119,7 @@ class MediaGenerator:
             "duration": 10,
             "resolution": "720p",
             "aspect_ratio": "9:16",
-            "generate_audio": False,
+            "generate_audio": True,
             "reference_images": ref_image_urls,
         }
 
