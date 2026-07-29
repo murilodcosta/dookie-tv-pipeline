@@ -45,7 +45,8 @@ class ScriptGenerator:
             "Rule 2: Title must be catchy, fun, under 100 characters, ending with MAX 2 video-relevant hashtags (e.g. #learning #topic). Must NOT contain '| Dookie Tv'.\n"
             "Rule 3: Description can contain a short summary and more hashtags (e.g. #topic #learning #kids #shorts #dookietv).\n"
             "Rule 4: Produce EXACTLY 1 continuous one-shot scene per video (10 to 12 seconds total duration).\n"
-            "Rule 5: Output valid JSON ONLY adhering to the requested schema."
+            "Rule 5: Mascots NEVER speak human words. Dookie (dog) makes barks/woofs; Mia (cat) makes meows/purrs; Carrot (rabbit) makes squeaks/crunching. Narration text is spoken ONLY by an off-screen friendly child narrator voice.\n"
+            "Rule 6: Output valid JSON ONLY adhering to the requested schema."
         )
 
     def _build_user_prompt(self, topic: str, mascot: str) -> str:
@@ -60,8 +61,8 @@ class ScriptGenerator:
             '  "scenes": [\n'
             "    {\n"
             '      "scene_number": 1,\n'
-            '      "animation_prompt": "Continuous 3D animation prompt describing 10-12s motion sequence",\n'
-            '      "narration_text": "Short 2-4 word sentence narration for the video",\n'
+            '      "animation_prompt": "Continuous 3D animation prompt describing 10-12s motion sequence with mascot animal sounds (no mascot human speech)",\n'
+            '      "narration_text": "Short 2-4 word sentence narration spoken by friendly off-screen child voice",\n'
             '      "duration_seconds": 10.0\n'
             "    }\n"
             "  ]\n"
@@ -106,7 +107,7 @@ class ScriptGenerator:
                 scenes=[
                     ScenePrompt(
                         scene_number=1,
-                        animation_prompt=f"Continuous 3D animation of mascot {mascot} smiling, jumping happily and interacting with {clean_topic} elements in a bright room",
+                        animation_prompt=f"Continuous 3D animation of mascot {mascot} smiling and gesturing happily with animal sound effects (barks/meows/squeaks, no human speech), interacting with {clean_topic} elements in a bright room",
                         narration_text=f"Hello friends! Today {mascot} learns {clean_topic}!",
                         duration_seconds=10.0,
                     ),
@@ -153,7 +154,7 @@ class ScriptGenerator:
                 scenes = [
                     ScenePrompt(
                         scene_number=1,
-                        animation_prompt=f"Cutout mascot {mascot} dancing and teaching {clean_topic}",
+                        animation_prompt=f"Cutout mascot {mascot} dancing with joyful animal sound effects (no mascot human speech) and teaching {clean_topic}",
                         narration_text=f"Let's learn {clean_topic} together!",
                         duration_seconds=10.0,
                     )

@@ -40,7 +40,7 @@ scripts/      # Infrastructure scripts (setup_vps.sh)
 
 Each subfolder under `src/` maps to a section of the pipeline (3.1 to 3.8) described in the MVP scope. When implementing a step, keep the code inside the matching folder.
 
-## Visual Identity (Fixed — Do not change without explicit approval)
+## Visual & Audio Identity (Fixed — Do not change without explicit approval)
 
 - **Palette:** 
   - Sunshine Yellow `#FFD166` (60% background)
@@ -50,6 +50,10 @@ Each subfolder under `src/` maps to a section of the pipeline (3.1 to 3.8) descr
 - **Font:** Fredoka (Bold/One), white fill, Midnight Blue outline 15-20%
 - **Subtitles:** Never more than 2-4 words on screen at once
 - **Video format:** 9:16 vertical Full HD (1080x1920), 30-60 seconds
+- **Audio & Voice Rules:**
+  - Mascots NEVER speak human words or languages. They communicate purely through species-specific animal SFX (Dookie: barks/woofs; Mia: meows/purrs; Carrot: squeaks/carrot crunching).
+  - The voice narration track represents an off-screen friendly child/narrator voice encouraging interactive participation.
+  - Background music is soft, cheerful, and kept at low volume beneath narration.
 
 ## Useful Commands
 
