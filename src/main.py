@@ -105,49 +105,43 @@ def run_pipeline():
     r2_destination_key = f"shorts/{today_str}_{mascot}_{topic}.mp4"
     r2_url = r2_client.upload_file(local_path=final_video_path, destination_key=r2_destination_key)
 
-    # 7. Human Review Gate via Telegram (3.6)
-    approved = telegram.send_video_for_review(
-        video_path=final_video_path,
-        title=script.title,
-        description=script.description,
-    )
-
-    if not approved:
-        logger.warning("❌ Video rejected during human review gate.")
-        video_id = db.log_video(
-            topic=topic,
-            mascot=mascot,
+    # 7. Human Review Gate via Telegram (3.6) & YouTube Upload (3.7)
+    try:
+        approved = telegram.send_video_for_review(
+            video_path=final_video_path,
             title=script.title,
             description=script.description,
-            status="rejected",
-            r2_url=r2_url,
-            r2_key=r2_destination_key,
         )
-        db.log_metrics(video_id=video_id, estimated_cost=total_estimated_cost)
-        return
+        if approved:
+            youtube_url = uploader.upload_short(
+                video_path=final_video_path,
+                title=script.title,
+                description=script.description,
+                tags=script.tags,
+            )
+            status = "approved"
+        else:
+            status = "rejected"
+            youtube_url = None
+    except Exception as review_err:
+        logger.warning(f"Telegram/YouTube review gateway step skipped ({review_err}). Saving video to R2 and logging history.")
+        status = "ready_for_review"
+        youtube_url = None
 
-    # 8. YouTube Publishing (3.7)
-    youtube_url = uploader.upload_short(
-        video_path=final_video_path,
-        title=script.title,
-        description=script.description,
-        tags=script.tags,
-    )
-
-    # 9. Log History & Cost Metrics in SQLite (3.8)
+    # 8. Log History & Cost Metrics in SQLite (3.8)
     video_id = db.log_video(
         topic=topic,
         mascot=mascot,
         title=script.title,
         description=script.description,
-        status="approved",
+        status=status,
         r2_url=r2_url,
         r2_key=r2_destination_key,
         youtube_url=youtube_url,
     )
     db.log_metrics(video_id=video_id, estimated_cost=total_estimated_cost)
 
-    logger.info(f"🚀 Pipeline executed successfully! Video ID #{video_id} published at: {youtube_url}")
+    logger.info(f"🚀 Pipeline executed successfully! Video ID #{video_id} uploaded to Cloudflare R2 at: {r2_url}")
     logger.info(f"📊 Observability Report: Video ID #{video_id} | Total Estimated Cost: ${total_estimated_cost:.4f} USD")
 
 
