@@ -15,13 +15,13 @@ class CloudflareR2Client:
         account_id: Optional[str] = None,
         access_key_id: Optional[str] = None,
         secret_access_key: Optional[str] = None,
-        bucket_name: str = "dookie-tv-media",
+        bucket_name: Optional[str] = None,
         mock_mode: bool = True,
     ):
         self.account_id = account_id or os.getenv("R2_ACCOUNT_ID")
         self.access_key_id = access_key_id or os.getenv("R2_ACCESS_KEY_ID")
         self.secret_access_key = secret_access_key or os.getenv("R2_SECRET_ACCESS_KEY")
-        self.bucket_name = bucket_name or os.getenv("R2_BUCKET_NAME", "dookie-tv-media")
+        self.bucket_name = bucket_name or os.getenv("R2_BUCKET_NAME") or "dookie-tv-assets"
         self.mock_mode = mock_mode
 
     def upload_file(self, local_path: str, destination_key: str) -> str:

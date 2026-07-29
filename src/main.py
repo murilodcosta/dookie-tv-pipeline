@@ -10,7 +10,7 @@ from datetime import datetime
 
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    load_dotenv(override=True)
 except ImportError:
     pass
 
@@ -41,7 +41,7 @@ def load_topics_and_mascots(config_path: str = "config/topics.json"):
 
 
 def run_pipeline():
-    mock_mode = os.getenv("ENABLE_MEDIA_MOCK", "true").lower() in ("true", "1", "yes")
+    mock_mode = os.getenv("ENABLE_MEDIA_MOCK", "false").lower() in ("true", "1", "yes")
     target_mascot_override = os.getenv("TARGET_MASCOT", "").strip() or None
 
     logger.info("🎬 Starting Dookie TV Automated Pipeline...")

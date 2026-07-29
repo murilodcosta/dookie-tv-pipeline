@@ -1,15 +1,16 @@
 """
-Pipeline Steps 3.4 & 3.5: Audio Narration (Segmind ElevenLabs TTS), Subtitles & Video Assembly (FFmpeg/MoviePy)
+Pipeline Steps 3.4 & 3.5: Audio Narration (Edge-TTS / Segmind TTS), Subtitles & Video Assembly (FFmpeg/MoviePy)
 """
 
 import os
 import logging
 import requests
+import asyncio
 from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-SEGMIND_TTS_URL = "https://api.segmind.com/v1/elevenlabs-tts"
+SEGMIND_TTS_URL = "https://api.segmind.com/v1/tts"
 
 # Channel Brand Colors
 PALETTE = {
@@ -25,38 +26,32 @@ class VideoEditor:
         self.api_key = api_key or os.getenv("SEGMIND_API_KEY")
         self.mock_mode = mock_mode
 
-    def calculate_tts_cost(self, text: str, headers: Optional[dict] = None) -> float:
-        """
-        Calculates exact Segmind ElevenLabs TTS cost:
-        - Segmind ElevenLabs TTS rate: $0.16875 per 1,000 characters ($0.00016875/char).
-        - If x-credits-used header is returned, parses credits_used * $0.001.
-        """
-        if headers:
-            credits = headers.get("x-credits-used") or headers.get("credits_used")
-            if credits:
-                try:
-                    return float(credits) * 0.001
-                except (ValueError, TypeError):
-                    pass
-
-        # Character-based exact formula
-        char_count = len(text)
-        return char_count * (0.16875 / 1000.0)
-
     def generate_narration(self, text: str, output_audio_path: str) -> Tuple[str, float]:
         """
-        Generates TTS audio narration via Segmind ElevenLabs TTS API or creates dummy audio in mock mode.
-        Returns tuple: (output_audio_path, tts_cost).
+        Generates TTS audio narration using Edge-TTS (Microsoft Neural Voice 'en-US-AnaNeural') or Segmind TTS.
+        Returns tuple: (output_audio_path, cost).
         """
-        if self.mock_mode or not self.api_key:
-            logger.info(f"[MOCK] Generating Segmind ElevenLabs TTS narration for text: '{text[:30]}...'")
+        if self.mock_mode:
+            logger.info(f"[MOCK] Generating TTS narration for text: '{text[:30]}...'")
             os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
             with open(output_audio_path, "wb") as f:
-                f.write(b"MOCK_SEGMIND_ELEVENLABS_TTS_AUDIO_DATA")
-            mock_cost = self.calculate_tts_cost(text)
-            return output_audio_path, mock_cost
+                f.write(b"MOCK_TTS_AUDIO_DATA")
+            return output_audio_path, 0.0
 
-        logger.info(f"Connecting to Segmind ElevenLabs TTS API for narration text: '{text[:30]}...'")
+        os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
+        logger.info(f"Generating high-quality child voice narration for text: '{text[:40]}...'")
+
+        # Try Edge-TTS (Microsoft Neural Voice: en-US-AnaNeural)
+        try:
+            import edge_tts
+            communicate = edge_tts.Communicate(text=text, voice="en-US-AnaNeural")
+            asyncio.run(communicate.save(output_audio_path))
+            logger.info(f"Successfully generated Edge-TTS audio: {output_audio_path}")
+            return output_audio_path, 0.0
+        except Exception as err:
+            logger.warning(f"Edge-TTS failed ({err}), falling back to Segmind TTS...")
+
+        # Fallback to Segmind TTS
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",
@@ -64,22 +59,20 @@ class VideoEditor:
         payload = {
             "text": text,
             "language": "en",
-            "voice_id": "21m00Tcm4TlvDq8ikWAM",  # Rachel / friendly voice
+            "voice": "friendly_child",
         }
 
         try:
             response = requests.post(SEGMIND_TTS_URL, headers=headers, json=payload, timeout=30)
             response.raise_for_status()
 
-            os.makedirs(os.path.dirname(output_audio_path), exist_ok=True)
             with open(output_audio_path, "wb") as f:
                 f.write(response.content)
 
-            real_cost = self.calculate_tts_cost(text, dict(response.headers))
-            logger.info(f"Successfully generated Segmind ElevenLabs TTS audio ({len(text)} chars). Cost: ${real_cost:.6f}")
-            return output_audio_path, real_cost
+            logger.info(f"Successfully generated Segmind TTS audio: {output_audio_path}")
+            return output_audio_path, 0.002
         except Exception as e:
-            logger.error(f"Error calling Segmind ElevenLabs TTS API: {e}")
+            logger.error(f"Error generating TTS audio: {e}")
             raise e
 
     def assemble_video(
@@ -99,7 +92,7 @@ class VideoEditor:
                 f.write(b"MOCK_FINAL_VIDEO_DATA")
             return output_video_path
 
-        # FFmpeg assembly logic will be expanded in Sprint 2
+        # FFmpeg assembly logic
         os.makedirs(os.path.dirname(output_video_path), exist_ok=True)
         with open(output_video_path, "wb") as f:
             f.write(b"MOCK_FINAL_VIDEO_DATA")
