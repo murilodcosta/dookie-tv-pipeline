@@ -49,7 +49,7 @@ Each subfolder under `src/` maps to a section of the pipeline (3.1 to 3.8) descr
   - Midnight Blue `#0F4C81` (text stroke/outline)
 - **Font:** Fredoka (Bold/One), white fill, Midnight Blue outline 15-20%
 - **Subtitles:** Never more than 2-4 words on screen at once
-- **Video format:** 9:16 vertical, 30-60 seconds
+- **Video format:** 9:16 vertical Full HD (1080x1920), 30-60 seconds
 
 ## Useful Commands
 

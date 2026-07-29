@@ -1,5 +1,5 @@
 """
-SQLite Database interface for recording video history, costs, and enforcing the 7-day topic/mascot no-repeat rule.
+SQLite Database interface for recording video history, costs, Cloudflare R2 links, and enforcing the 7-day topic/mascot no-repeat rule.
 """
 
 import sqlite3
@@ -21,7 +21,7 @@ class DatabaseManager:
         return sqlite3.connect(self.db_path)
 
     def _init_db(self):
-        """Initializes SQLite tables if they do not exist."""
+        """Initializes SQLite tables and performs migrations if needed."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -30,7 +30,10 @@ class DatabaseManager:
                     topic TEXT NOT NULL,
                     mascot TEXT NOT NULL,
                     title TEXT NOT NULL,
+                    description TEXT,
                     status TEXT NOT NULL,
+                    r2_url TEXT,
+                    r2_key TEXT,
                     youtube_url TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
@@ -42,9 +45,21 @@ class DatabaseManager:
                     views_24h INTEGER DEFAULT 0,
                     views_7d INTEGER DEFAULT 0,
                     estimated_cost REAL DEFAULT 0.0,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (video_id) REFERENCES video_history (id)
                 );
             """)
+
+            # Auto-migration check for existing databases
+            cursor.execute("PRAGMA table_info(video_history);")
+            columns = [col[1] for col in cursor.fetchall()]
+            if "description" not in columns:
+                cursor.execute("ALTER TABLE video_history ADD COLUMN description TEXT;")
+            if "r2_url" not in columns:
+                cursor.execute("ALTER TABLE video_history ADD COLUMN r2_url TEXT;")
+            if "r2_key" not in columns:
+                cursor.execute("ALTER TABLE video_history ADD COLUMN r2_key TEXT;")
+
             conn.commit()
 
     def is_topic_valid_for_mascot(self, topic: str, mascot: str, days: int = 7) -> bool:
@@ -79,16 +94,40 @@ class DatabaseManager:
         # Fallback if all topics were used recently
         return target_mascot, available_topics[0]
 
-    def log_video(self, topic: str, mascot: str, title: str, status: str, youtube_url: Optional[str] = None) -> int:
+    def log_video(
+        self,
+        topic: str,
+        mascot: str,
+        title: str,
+        status: str,
+        description: Optional[str] = None,
+        r2_url: Optional[str] = None,
+        r2_key: Optional[str] = None,
+        youtube_url: Optional[str] = None,
+    ) -> int:
         """Logs a generated video entry into SQLite."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 """
-                INSERT INTO video_history (topic, mascot, title, status, youtube_url)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO video_history (topic, mascot, title, description, status, r2_url, r2_key, youtube_url)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (topic, mascot, title, status, youtube_url),
+                (topic, mascot, title, description, status, r2_url, r2_key, youtube_url),
             )
             conn.commit()
             return cursor.lastrowid
+
+    def log_metrics(self, video_id: int, estimated_cost: float, views_24h: int = 0, views_7d: int = 0):
+        """Logs cost observability metrics linked to a specific video."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                INSERT INTO metrics_log (video_id, estimated_cost, views_24h, views_7d)
+                VALUES (?, ?, ?, ?)
+                """,
+                (video_id, estimated_cost, views_24h, views_7d),
+            )
+            conn.commit()
+            logger.info(f"📊 Observability logged for Video #{video_id}: Estimated Cost = ${estimated_cost:.4f}")

@@ -6,6 +6,8 @@ Runs full end-to-end flow from script generation to approval and upload.
 import os
 import json
 import logging
+from datetime import datetime
+
 try:
     from dotenv import load_dotenv
     load_dotenv()
@@ -64,12 +66,13 @@ def run_pipeline():
     logger.info(f"✨ Selected Mascot: '{mascot}', Topic: '{topic}'")
 
     # 3. Generate Script & Metadata (3.1)
-    script = script_gen.generate_script(topic=topic, mascot=mascot, mock_mode=mock_mode)
-    logger.info(f"📝 Script generated: '{script.title}' with {len(script.scenes)} scenes.")
+    script, deepseek_cost = script_gen.generate_script(topic=topic, mascot=mascot, mock_mode=mock_mode)
+    logger.info(f"📝 Script generated: '{script.title}' ({len(script.scenes)} scene/one-shot). DeepSeek Cost: ${deepseek_cost:.6f}")
 
     # 4. Generate Media Assets (3.2 & 3.3)
     generated_video_clips = []
     generated_audio_clips = []
+    segmind_tts_cost = 0.0
     
     mascot_asset_path = media_gen.get_mascot_asset(mascot)
     
@@ -78,10 +81,14 @@ def run_pipeline():
         audio_path = f"data/output/temp/scene_{scene.scene_number}.mp3"
 
         media_gen.animate_video(image_path=mascot_asset_path, prompt=scene.animation_prompt, output_path=video_path)
-        editor.generate_narration(text=scene.narration_text, output_audio_path=audio_path)
+        audio_path, tts_cost = editor.generate_narration(text=scene.narration_text, output_audio_path=audio_path)
+        segmind_tts_cost += tts_cost
 
         generated_video_clips.append(video_path)
         generated_audio_clips.append(audio_path)
+
+    segmind_video_cost = 0.85  # 10s 1080p Seedance 2.0 one-shot
+    total_estimated_cost = deepseek_cost + segmind_video_cost + segmind_tts_cost
 
     # 5. Final Video Assembly (3.4 & 3.5)
     final_video_path = "data/output/final_short.mp4"
@@ -93,8 +100,10 @@ def run_pipeline():
         output_video_path=final_video_path,
     )
 
-    # 6. Upload copy to Cloudflare R2
-    r2_url = r2_client.upload_file(local_path=final_video_path, destination_key=f"shorts/{topic}_{mascot}.mp4")
+    # 6. Standardized Upload copy to Cloudflare R2
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    r2_destination_key = f"shorts/{today_str}_{mascot}_{topic}.mp4"
+    r2_url = r2_client.upload_file(local_path=final_video_path, destination_key=r2_destination_key)
 
     # 7. Human Review Gate via Telegram (3.6)
     approved = telegram.send_video_for_review(
@@ -105,7 +114,16 @@ def run_pipeline():
 
     if not approved:
         logger.warning("❌ Video rejected during human review gate.")
-        db.log_video(topic=topic, mascot=mascot, title=script.title, status="rejected")
+        video_id = db.log_video(
+            topic=topic,
+            mascot=mascot,
+            title=script.title,
+            description=script.description,
+            status="rejected",
+            r2_url=r2_url,
+            r2_key=r2_destination_key,
+        )
+        db.log_metrics(video_id=video_id, estimated_cost=total_estimated_cost)
         return
 
     # 8. YouTube Publishing (3.7)
@@ -116,16 +134,21 @@ def run_pipeline():
         tags=script.tags,
     )
 
-    # 9. Log History in SQLite (3.8)
+    # 9. Log History & Cost Metrics in SQLite (3.8)
     video_id = db.log_video(
         topic=topic,
         mascot=mascot,
         title=script.title,
+        description=script.description,
         status="approved",
+        r2_url=r2_url,
+        r2_key=r2_destination_key,
         youtube_url=youtube_url,
     )
+    db.log_metrics(video_id=video_id, estimated_cost=total_estimated_cost)
 
     logger.info(f"🚀 Pipeline executed successfully! Video ID #{video_id} published at: {youtube_url}")
+    logger.info(f"📊 Observability Report: Video ID #{video_id} | Total Estimated Cost: ${total_estimated_cost:.4f} USD")
 
 
 if __name__ == "__main__":

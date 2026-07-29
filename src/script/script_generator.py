@@ -1,13 +1,13 @@
 """
 Pipeline Step 3.1: DeepSeek Script & Metadata Generator
-Calls DeepSeek V4 Flash API to generate structured JSON scripts for YouTube Shorts.
+Calls DeepSeek V4 Flash API to generate structured JSON scripts for YouTube Shorts (One-Shot continuous scene).
 """
 
 import os
 import json
 import logging
 import requests
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class ScenePrompt:
     scene_number: int
     animation_prompt: str
     narration_text: str
-    duration_seconds: float = 5.0
+    duration_seconds: float = 10.0
 
 
 @dataclass
@@ -41,60 +41,80 @@ class ScriptGenerator:
         return (
             "You are an expert children's content creator writing short, engaging scripts for YouTube Shorts.\n"
             "Channel: Dookie Tv. Audience: Toddlers and young kids (2-6 years old).\n"
-            "Rule 1: Narration must use very simple words, short sentences (2-4 words max per caption screen).\n"
-            "Rule 2: Title must be catchy, fun, under 100 characters, ending with '| Dookie Tv'.\n"
-            "Rule 3: Produce exactly 2 to 3 scenes per video, totaling 15-30 seconds.\n"
-            "Rule 4: Output valid JSON ONLY adhering to the requested schema."
+            "Rule 1: Narration must use simple words, short sentences (2-4 words max per caption screen).\n"
+            "Rule 2: Title must be catchy, fun, under 100 characters, ending with MAX 2 video-relevant hashtags (e.g. #learning #topic). Must NOT contain '| Dookie Tv'.\n"
+            "Rule 3: Description can contain a short summary and more hashtags (e.g. #topic #learning #kids #shorts #dookietv).\n"
+            "Rule 4: Produce EXACTLY 1 continuous one-shot scene per video (10 to 12 seconds total duration).\n"
+            "Rule 5: Output valid JSON ONLY adhering to the requested schema."
         )
 
     def _build_user_prompt(self, topic: str, mascot: str) -> str:
+        clean_topic = topic.replace("_", " ")
         return (
-            f"Generate a Short script featuring mascot '{mascot.capitalize()}' teaching/demonstrating topic '{topic}'.\n"
+            f"Generate a continuous one-shot Short script featuring mascot '{mascot.capitalize()}' teaching/demonstrating topic '{clean_topic}'.\n"
             "Respond ONLY with a JSON object containing the following keys:\n"
             "{\n"
-            '  "title": "Short title under 100 chars | Dookie Tv",\n'
-            '  "description": "Short description with #hashtags",\n'
-            '  "tags": ["tag1", "tag2", "tag3"],\n'
+            '  "title": "Fun Title Under 100 Chars #learning #' + topic.split("_")[0] + '",\n'
+            '  "description": "Short friendly video summary. #' + topic + ' #learning #kids #shorts #dookietv",\n'
+            '  "tags": ["kids", "shorts", "learning", "' + topic + '", "dookietv"],\n'
             '  "scenes": [\n'
             "    {\n"
             '      "scene_number": 1,\n'
-            '      "animation_prompt": "Action description for 3D animation (e.g. Mascot smiling and jumping happily)",\n'
-            '      "narration_text": "Short 2-4 word sentence for narration",\n'
-            '      "duration_seconds": 5.0\n'
+            '      "animation_prompt": "Continuous 3D animation prompt describing 10-12s motion sequence",\n'
+            '      "narration_text": "Short 2-4 word sentence narration for the video",\n'
+            '      "duration_seconds": 10.0\n'
             "    }\n"
             "  ]\n"
             "}"
         )
 
-    def generate_script(self, topic: str, mascot: str, mock_mode: bool = True) -> ShortScript:
+    def calculate_cost(self, usage: Dict[str, Any]) -> float:
         """
-        Generates a structured video script using DeepSeek API or mock fallback.
+        Calculates exact DeepSeek V4 Flash API cost:
+        - 1M Input Tokens (Cache Hit): $0.0028 ($0.0000000028/token)
+        - 1M Input Tokens (Cache Miss): $0.14 ($0.00000014/token)
+        - 1M Output Tokens: $0.28 ($0.00000028/token)
         """
+        if not usage:
+            return 0.0005  # Fallback estimate
+
+        prompt_cache_hit = usage.get("prompt_cache_hit_tokens", 0)
+        prompt_cache_miss = usage.get("prompt_cache_miss_tokens", usage.get("prompt_tokens", 0) - prompt_cache_hit)
+        completion_tokens = usage.get("completion_tokens", 0)
+
+        hit_cost = prompt_cache_hit * (0.0028 / 1_000_000)
+        miss_cost = max(0, prompt_cache_miss) * (0.14 / 1_000_000)
+        output_cost = completion_tokens * (0.28 / 1_000_000)
+
+        return hit_cost + miss_cost + output_cost
+
+    def generate_script(self, topic: str, mascot: str, mock_mode: bool = True) -> Tuple[ShortScript, float]:
+        """
+        Generates a structured video script using DeepSeek API or mock fallback, returning (script, cost).
+        """
+        clean_topic = topic.replace("_", " ")
+        topic_tag = topic.replace("_", "")
+
         if mock_mode or not self.api_key:
-            logger.info(f"[MOCK] ScriptGenerator: Generating mock script for mascot '{mascot}' & topic '{topic}'")
-            return ShortScript(
-                title=f"{mascot.capitalize()} Learns {topic.replace('_', ' ').capitalize()}! 🎨 | Dookie Tv",
-                description=f"Join {mascot.capitalize()} on Dookie Tv as we learn about {topic}! #kids #dookietv #{topic}",
-                tags=["kids", "learning", mascot.lower(), topic.lower(), "shorts", "dookietv"],
+            logger.info(f"[MOCK] ScriptGenerator: Generating one-shot mock script for mascot '{mascot}' & topic '{topic}'")
+            mock_script = ShortScript(
+                title=f"{mascot.capitalize()} Learns {clean_topic.capitalize()}! 🎨 #learning #{topic_tag}",
+                description=f"Join {mascot.capitalize()} on Dookie Tv as we learn about {clean_topic}! #{topic_tag} #learning #kids #shorts #dookietv",
+                tags=["kids", "shorts", "learning", mascot.lower(), topic.lower()],
                 mascot=mascot,
                 topic=topic,
                 scenes=[
                     ScenePrompt(
                         scene_number=1,
-                        animation_prompt=f"3D mascot {mascot} smiling and waving happily in a sunny room",
-                        narration_text=f"Hello friends! Today {mascot} learns {topic.replace('_', ' ')}!",
-                        duration_seconds=5.0,
-                    ),
-                    ScenePrompt(
-                        scene_number=2,
-                        animation_prompt=f"Mascot {mascot} pointing excitedly at colorful objects",
-                        narration_text="Look how wonderful! Can you count with me?",
-                        duration_seconds=5.0,
+                        animation_prompt=f"Continuous 3D animation of mascot {mascot} smiling, jumping happily and interacting with {clean_topic} elements in a bright room",
+                        narration_text=f"Hello friends! Today {mascot} learns {clean_topic}!",
+                        duration_seconds=10.0,
                     ),
                 ],
             )
+            return mock_script, 0.0005
 
-        logger.info(f"Connecting to DeepSeek API for mascot '{mascot}' & topic '{topic}'...")
+        logger.info(f"Connecting to DeepSeek API for mascot '{mascot}' & topic '{topic}' (One-Shot mode)...")
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
@@ -115,25 +135,42 @@ class ScriptGenerator:
             res_data = response.json()
             content = res_data["choices"][0]["message"]["content"]
             parsed_json = json.loads(content)
+            
+            usage = res_data.get("usage", {})
+            real_cost = self.calculate_cost(usage)
 
             scenes = [
                 ScenePrompt(
-                    scene_number=s.get("scene_number", idx + 1),
+                    scene_number=s.get("scene_number", 1),
                     animation_prompt=s.get("animation_prompt", ""),
                     narration_text=s.get("narration_text", ""),
-                    duration_seconds=float(s.get("duration_seconds", 5.0)),
+                    duration_seconds=float(s.get("duration_seconds", 10.0)),
                 )
                 for idx, s in enumerate(parsed_json.get("scenes", []))
             ]
 
-            return ShortScript(
-                title=parsed_json.get("title", f"{mascot.capitalize()} Short | Dookie Tv"),
-                description=parsed_json.get("description", ""),
-                tags=parsed_json.get("tags", ["kids", "dookietv"]),
+            if not scenes:
+                scenes = [
+                    ScenePrompt(
+                        scene_number=1,
+                        animation_prompt=f"Cutout mascot {mascot} dancing and teaching {clean_topic}",
+                        narration_text=f"Let's learn {clean_topic} together!",
+                        duration_seconds=10.0,
+                    )
+                ]
+
+            raw_title = parsed_json.get("title", f"{mascot.capitalize()} Short")
+            clean_title = raw_title.replace("| Dookie Tv", "").replace("| Dookie TV", "").strip()
+
+            script = ShortScript(
+                title=clean_title,
+                description=parsed_json.get("description", f"Join {mascot.capitalize()} for fun learning! #{topic_tag} #learning #kids #shorts #dookietv"),
+                tags=parsed_json.get("tags", ["kids", "shorts", "learning"]),
                 mascot=mascot,
                 topic=topic,
                 scenes=scenes,
             )
+            return script, real_cost
         except Exception as e:
             logger.error(f"Error calling DeepSeek API: {e}. Falling back to mock script.")
             raise e
