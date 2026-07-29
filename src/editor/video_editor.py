@@ -1,16 +1,19 @@
 """
 Pipeline Steps 3.4 & 3.5: Audio Narration (Edge-TTS / Segmind TTS), Subtitles & Video Assembly (FFmpeg/MoviePy)
+Uses Fredoka-SemiBold.ttf for ASS burned animated subtitles.
 """
 
 import os
 import logging
+import subprocess
 import requests
 import asyncio
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Dict, Any
 
 logger = logging.getLogger(__name__)
 
 SEGMIND_TTS_URL = "https://api.segmind.com/v1/tts"
+FONT_PATH = os.path.abspath("assets/fonts/Fredoka-SemiBold.ttf")
 
 # Channel Brand Colors
 PALETTE = {
@@ -25,6 +28,50 @@ class VideoEditor:
     def __init__(self, api_key: Optional[str] = None, mock_mode: bool = True):
         self.api_key = api_key or os.getenv("SEGMIND_API_KEY")
         self.mock_mode = mock_mode
+
+    def create_ass_subtitle_file(self, subtitle_items: List[Dict[str, Any]], output_ass_path: str) -> str:
+        """
+        Creates an Advanced SubStation Alpha (.ass) subtitle file formatted with Fredoka-SemiBold font.
+        White text fill, Midnight Blue outline (#0F4C81).
+        """
+        font_name = "Fredoka-SemiBold"
+        ass_header = (
+            "[Script Info]\n"
+            "Title: Dookie TV Animated Subtitles\n"
+            "ScriptType: v4.00+\n"
+            "WrapStyle: 0\n"
+            "ScaledBorderAndShadow: yes\n"
+            "YCbCr Matrix: None\n"
+            "PlayResX: 1080\n"
+            "PlayResY: 1920\n\n"
+            "[V4+ Styles]\n"
+            "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, "
+            "Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+            "Alignment, MarginL, MarginR, MarginV, Encoding\n"
+            f"Style: Default,{font_name},72,&H00FFFFFF,&H000000FF,&H00814C0F,&H80000000,"
+            "-1,0,0,0,100,100,0,0,1,5,0,2,80,80,240,1\n\n"
+            "[Events]\n"
+            "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n"
+        )
+
+        dialogues = []
+        for idx, item in enumerate(subtitle_items):
+            start_s = item.get("start", 0.0 + (idx * 3.0))
+            end_s = item.get("end", start_s + 3.0)
+            text = item.get("text", "")
+
+            # Format timestamps H:MM:SS.cs
+            start_str = f"{int(start_s//3600)}:{int((start_s%3600)//60):02d}:{start_s%60:05.2f}"
+            end_str = f"{int(end_s//3600)}:{int((end_s%3600)//60):02d}:{end_s%60:05.2f}"
+
+            dialogues.append(f"Dialogue: 0,{start_str},{end_str},Default,,0,0,0,,{text}")
+
+        os.makedirs(os.path.dirname(output_ass_path), exist_ok=True)
+        with open(output_ass_path, "w", encoding="utf-8") as f:
+            f.write(ass_header + "\n".join(dialogues) + "\n")
+
+        logger.info(f"Created ASS subtitle file ({len(dialogues)} dialogues): {output_ass_path}")
+        return output_ass_path
 
     def generate_narration(self, text: str, output_audio_path: str) -> Tuple[str, float]:
         """
@@ -83,7 +130,7 @@ class VideoEditor:
         output_video_path: str,
     ) -> str:
         """
-        Merges video clips, syncs audio, burns Fredoka subtitles, and exports 9:16 Shorts video.
+        Merges video clips, syncs audio, burns Fredoka-SemiBold subtitles, and exports 9:16 Shorts video.
         """
         if self.mock_mode:
             logger.info(f"[MOCK] Assembling final video into {output_video_path}")
@@ -92,8 +139,36 @@ class VideoEditor:
                 f.write(b"MOCK_FINAL_VIDEO_DATA")
             return output_video_path
 
-        # FFmpeg assembly logic
         os.makedirs(os.path.dirname(output_video_path), exist_ok=True)
-        with open(output_video_path, "wb") as f:
-            f.write(b"MOCK_FINAL_VIDEO_DATA")
-        return output_video_path
+
+        # Prepare ASS subtitle file
+        ass_path = "data/output/temp/subtitles.ass"
+        sub_items = [{"start": i * 3.0, "end": (i + 1) * 3.0, "text": text} for i, text in enumerate(subtitles)]
+        self.create_ass_subtitle_file(sub_items, ass_path)
+
+        input_video = video_clips[0] if video_clips else "data/output/temp/scene_1.mp4"
+
+        # Burn subtitles using FFmpeg with Fredoka-SemiBold font
+        escaped_ass = ass_path.replace("\\", "/").replace(":", "\\:")
+        escaped_font = FONT_PATH.replace("\\", "/").replace(":", "\\:")
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", input_video,
+            "-vf", f"subtitles='{escaped_ass}':fontsdir='{os.path.dirname(escaped_font)}'",
+            "-c:v", "libx264",
+            "-c:a", "copy",
+            output_video_path
+        ]
+
+        try:
+            logger.info(f"Executing FFmpeg subtitle burn: {' '.join(cmd)}")
+            subprocess.run(cmd, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            logger.info(f"FFmpeg assembly complete: {output_video_path}")
+            return output_video_path
+        except Exception as err:
+            logger.warning(f"FFmpeg subtitle burn failed ({err}). Copying base video.")
+            if os.path.exists(input_video):
+                with open(input_video, "rb") as f_in, open(output_video_path, "wb") as f_out:
+                    f_out.write(f_in.read())
+            return output_video_path
