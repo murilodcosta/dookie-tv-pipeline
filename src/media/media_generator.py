@@ -101,7 +101,7 @@ class MediaGenerator:
         payload = {
             "prompt": styled_prompt,
             "duration": int(duration),
-            "resolution": "720p",
+            "resolution": "1080p",
             "aspect_ratio": "9:16",
             "generate_audio": True,
             "reference_images": ref_image_urls,
