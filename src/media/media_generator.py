@@ -100,8 +100,8 @@ class MediaGenerator:
         # Segmind Seedance 2.0 EXACT payload parameters
         payload = {
             "prompt": styled_prompt,
-            "duration": int(duration),
-            "resolution": "1080p",
+            "duration": 10,
+            "resolution": "720p",
             "aspect_ratio": "9:16",
             "generate_audio": True,
             "reference_images": ref_image_urls,
