@@ -48,7 +48,7 @@ Every prompt must reference `image 1 and image 2` for mascot visual binding:
 Every prompt ends with these two metadata lines:
 ```text
 Location: [Location description], [Time of day].
-Audio: Off-screen friendly child narrator voice, upbeat cheerful children's background music, mascot species-specific SFX only (NO mascot human speech).
+Audio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children's background music matching music_reference.mp3, mascot species-specific SFX only (NO mascot human speech).
 ```
 
 ---
