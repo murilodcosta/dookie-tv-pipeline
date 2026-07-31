@@ -41,11 +41,18 @@ class ScriptGenerator:
         self.api_key = api_key or os.getenv("DEEPSEEK_API_KEY")
 
     def _build_system_prompt(self) -> str:
+        framework_path = os.path.abspath("config/multi_shot_prompt_framework.md")
+        framework_text = ""
+        if os.path.exists(framework_path):
+            with open(framework_path, "r", encoding="utf-8") as f:
+                framework_text = f.read()
+
         return (
             "You are an expert children's content creator and cinematic prompt engineer writing multi-shot animation prompts for YouTube Shorts.\n"
             "Channel: Dookie Tv. Audience: Toddlers and young kids (2-6 years old).\n"
             "Visual Style: 3D Pixar animated cartoon style, stylized cute 3D character, smooth 3D render. Palette: Sunshine Yellow #FFD166, Sky Blue #4EA8DE, Bubblegum Pink #EF476F. NO realistic photo animals.\n\n"
-            "MULTI-SHOT ANIMATION PROMPT FRAMEWORK RULES:\n"
+            f"MULTI-SHOT PROMPT FRAMEWORK DOCUMENT:\n{framework_text}\n\n"
+            "ADDITIONAL SYSTEM RULES:\n"
             "1. Total Video Duration: EXACTLY 12.0 to 15.0 seconds total.\n"
             "2. Multi-Shot Sequence: Divide video into 2 to 4 distinct timecoded shots (3s to 5s each). Each shot opens with [MM:SS - MM:SS] (e.g. [00:00 - 00:05]).\n"
             "3. Per-Shot Specs: Each shot MUST specify 4 camera parameters: Shot size (Wide/Medium/Close-up/Macro), Lens (24mm/35mm/50mm/85mm), Camera Angle (Low angle/High angle/Eye-level), Camera Movement (Push in/Pull out/Track/Orbit/Pan/Tilt/Static).\n"
