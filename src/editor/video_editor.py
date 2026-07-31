@@ -8,7 +8,7 @@ import logging
 import subprocess
 import requests
 import asyncio
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple, Dict, Any, Union
 
 logger = logging.getLogger(__name__)
 
@@ -56,9 +56,9 @@ class VideoEditor:
 
         dialogues = []
         for idx, item in enumerate(subtitle_items):
-            start_s = item.get("start", 0.0 + (idx * 3.0))
-            end_s = item.get("end", start_s + 3.0)
-            text = item.get("text", "")
+            start_s = float(item.get("start", 0.0 + (idx * 3.0)))
+            end_s = float(item.get("end", start_s + 3.0))
+            text = str(item.get("text", ""))
 
             # Format timestamps H:MM:SS.cs
             start_str = f"{int(start_s//3600)}:{int((start_s%3600)//60):02d}:{start_s%60:05.2f}"
@@ -126,7 +126,7 @@ class VideoEditor:
         self,
         video_clips: List[str],
         audio_clips: List[str],
-        subtitles: List[str],
+        subtitles: List[Any],
         output_video_path: str,
     ) -> str:
         """
@@ -143,7 +143,15 @@ class VideoEditor:
 
         # Prepare ASS subtitle file
         ass_path = "data/output/temp/subtitles.ass"
-        sub_items = [{"start": i * 3.0, "end": (i + 1) * 3.0, "text": text} for i, text in enumerate(subtitles)]
+        sub_items = []
+        for i, sub in enumerate(subtitles):
+            if hasattr(sub, "start") and hasattr(sub, "end") and hasattr(sub, "text"):
+                sub_items.append({"start": sub.start, "end": sub.end, "text": sub.text})
+            elif isinstance(sub, dict):
+                sub_items.append({"start": sub.get("start", i * 3.0), "end": sub.get("end", (i + 1) * 3.0), "text": sub.get("text", "")})
+            else:
+                sub_items.append({"start": i * 3.0, "end": (i + 1) * 3.0, "text": str(sub)})
+
         self.create_ass_subtitle_file(sub_items, ass_path)
 
         input_video = video_clips[0] if video_clips else "data/output/temp/scene_1.mp4"

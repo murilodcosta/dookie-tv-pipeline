@@ -67,36 +67,34 @@ def run_pipeline():
 
     # 3. Generate Script & Metadata (3.1)
     script, deepseek_cost = script_gen.generate_script(topic=topic, mascot=mascot, mock_mode=mock_mode)
-    logger.info(f"📝 Script generated: '{script.title}' ({len(script.scenes)} scene/one-shot). DeepSeek Cost: ${deepseek_cost:.6f}")
+    logger.info(f"📝 Script generated: '{script.title}' ({script.total_duration_seconds}s Multi-Shot). DeepSeek Cost: ${deepseek_cost:.6f}")
 
     # 4. Generate Media Assets (3.2 & 3.3)
-    generated_video_clips = []
-    generated_audio_clips = []
-    segmind_tts_cost = 0.0
-    
     mascot_asset_path = media_gen.get_mascot_asset(mascot)
-    
-    for scene in script.scenes:
-        video_path = f"data/output/temp/scene_{scene.scene_number}.mp4"
-        audio_path = f"data/output/temp/scene_{scene.scene_number}.mp3"
+    video_path = "data/output/temp/scene_1.mp4"
+    audio_path = "data/output/temp/scene_1.mp3"
 
-        media_gen.animate_video(image_path=mascot_asset_path, prompt=scene.animation_prompt, output_path=video_path, mascot=mascot)
-        audio_path, tts_cost = editor.generate_narration(text=scene.narration_text, output_audio_path=audio_path)
-        segmind_tts_cost += tts_cost
+    media_gen.animate_video(
+        image_path=mascot_asset_path,
+        prompt=script.animation_prompt,
+        output_path=video_path,
+        mascot=mascot,
+        duration=int(script.total_duration_seconds),
+    )
+    audio_path, segmind_tts_cost = editor.generate_narration(text=script.narration_text, output_audio_path=audio_path)
 
-        generated_video_clips.append(video_path)
-        generated_audio_clips.append(audio_path)
+    generated_video_clips = [video_path]
+    generated_audio_clips = [audio_path]
 
-    segmind_video_cost = 0.85  # 10s 1080p Seedance 2.0 one-shot
+    segmind_video_cost = 0.85  # 12-15s 1080p Seedance 2.0 multi-shot
     total_estimated_cost = deepseek_cost + segmind_video_cost + segmind_tts_cost
 
     # 5. Final Video Assembly (3.4 & 3.5)
     final_video_path = "data/output/final_short.mp4"
-    subtitles = [s.narration_text for s in script.scenes]
     editor.assemble_video(
         video_clips=generated_video_clips,
         audio_clips=generated_audio_clips,
-        subtitles=subtitles,
+        subtitles=script.subtitles,
         output_video_path=final_video_path,
     )
 
