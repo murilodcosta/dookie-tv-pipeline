@@ -66,13 +66,18 @@ class ScriptGenerator:
             "   Location: [Location], [Time of day].\n"
             "   Audio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children's background music matching music_reference.mp3, mascot species-specific SFX only (NO mascot human speech).\n"
             "11. Prompt Length Limit: Entire animation_prompt MUST be 1,500 characters or fewer.\n"
-            "12. Metadata Rules: Title < 100 chars (NO '| Dookie Tv', max 2 hashtags). Description with #kids #shorts #dookietv.\n"
-            "13. Output valid JSON ONLY adhering to the requested schema."
+            "12. Description Format (STRICT): Description MUST follow this exact format with emojis and fixed boilerplate footer text:\n"
+            "    [Friendly 1-line summary with mascot emoji 🐶/🐱/🐰]\n\n"
+            "    New videos coming soon from Dookie Tv — stay tuned for more with Dookie, Mia, and Carrot! 🎨\n\n"
+            "    #[topic] #learning #kids #shorts #dookietv\n"
+            "13. Title Rules: Title < 100 chars (NO '| Dookie Tv', max 2 hashtags).\n"
+            "14. Output valid JSON ONLY adhering to the requested schema."
         )
 
     def _build_user_prompt(self, topic: str, mascot: str) -> str:
         clean_topic = topic.replace("_", " ")
         mascot_cap = mascot.capitalize()
+        mascot_emoji = "🐶" if mascot.lower() == "dookie" else ("🐱" if mascot.lower() == "mia" else "🐰")
         sfx_desc = "happy barks and puppy woofs" if mascot.lower() == "dookie" else ("sweet meows and purrs" if mascot.lower() == "mia" else "soft squeaks and carrot crunching")
 
         return (
@@ -80,7 +85,7 @@ class ScriptGenerator:
             "Respond ONLY with a JSON object containing the following keys:\n"
             "{\n"
             '  "title": "' + mascot_cap + ' Learns ' + clean_topic.capitalize() + '! 🎨 #learning #' + topic.split("_")[0] + '",\n'
-            '  "description": "Join ' + mascot_cap + ' on Dookie Tv as we learn about ' + clean_topic + '! #' + topic + ' #learning #kids #shorts #dookietv",\n'
+            '  "description": "Join ' + mascot_cap + ' on Dookie Tv as we learn about ' + clean_topic + '! ' + mascot_emoji + '\\n\\nNew videos coming soon from Dookie Tv — stay tuned for more with Dookie, Mia, and Carrot! 🎨\\n\\n#' + topic + ' #learning #kids #shorts #dookietv",\n'
             '  "tags": ["kids", "shorts", "learning", "' + topic + '", "dookietv"],\n'
             '  "total_duration_seconds": 10.0,\n'
             '  "animation_prompt": "[00:00 - 00:05] Wide, 24mm, eye-level, track — ' + mascot_cap + ', the mascot character from image 1 and image 2, sits happily in a bright playroom with a sunshine yellow background (#FFD166). At 00:02, a glowing 3D number 1 pops up beside him, off-screen child voice narrates \\"One!\\". ' + mascot_cap + ' waves excitedly with a big smile.\\n\\n[00:05 - 00:10] Medium, 50mm, high angle, push in — At 00:06, a glowing sky blue 3D number 2 pops up, off-screen child voice narrates \\"Two!\\". At 00:08, a glowing bubblegum pink 3D number 3 pops up, off-screen child voice narrates \\"Three!\\". ' + mascot_cap + ' tilts head playfully. NO on-screen text, NO subtitles, NO AI captions.\\n\\nLocation: Bright colorful playroom, sunny morning.\\nAudio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children\'s background music matching music_reference.mp3, mascot ' + sfx_desc + ' (NO mascot human speech).",\n'
@@ -120,6 +125,7 @@ class ScriptGenerator:
         clean_topic = topic.replace("_", " ")
         topic_tag = topic.replace("_", "")
         mascot_cap = mascot.capitalize()
+        mascot_emoji = "🐶" if mascot.lower() == "dookie" else ("🐱" if mascot.lower() == "mia" else "🐰")
         sfx_desc = "happy barks and puppy woofs" if mascot.lower() == "dookie" else ("sweet meows and purrs" if mascot.lower() == "mia" else "soft squeaks and carrot crunching")
 
         if mock_mode or not self.api_key:
@@ -130,15 +136,18 @@ class ScriptGenerator:
                 f'off-screen child voice narrates "One!". {mascot_cap} waves excitedly.\n\n'
                 f"[00:05 - 00:10] Medium, 50mm, high angle, push in — At 00:06, a glowing sky blue 3D number 2 pops up, "
                 f'off-screen child voice narrates "Two!". At 00:08, a glowing bubblegum pink 3D number 3 pops up, '
-                f'off-screen child voice narrates "Three!". {mascot_cap} tilts head playfully.\n\n'
-                f"[00:10 - 00:15] Close-up, 85mm, low angle, static — {mascot_cap} smiles bright as 3D numbers 1, 2, and 3 bounce rhythmically around him. "
-                "NO on-screen text, NO subtitles, NO AI captions.\n\n"
+                f'off-screen child voice narrates "Three!". {mascot_cap} tilts head playfully. NO on-screen text, NO subtitles, NO AI captions.\n\n'
                 "Location: Bright colorful playroom, sunny morning.\n"
-                f"Audio: Off-screen friendly child narrator voice, upbeat cheerful children's background music, mascot {sfx_desc} (NO mascot human speech)."
+                f"Audio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children's background music matching music_reference.mp3, mascot {sfx_desc} (NO mascot human speech)."
+            )
+            mock_desc = (
+                f"Join {mascot_cap} on Dookie Tv as we learn about {clean_topic}! {mascot_emoji}\n\n"
+                "New videos coming soon from Dookie Tv — stay tuned for more with Dookie, Mia, and Carrot! 🎨\n\n"
+                f"#{topic_tag} #learning #kids #shorts #dookietv"
             )
             mock_script = ShortScript(
                 title=f"{mascot_cap} Learns {clean_topic.capitalize()}! 🎨 #learning #{topic_tag}",
-                description=f"Join {mascot_cap} on Dookie Tv as we learn about {clean_topic}! #{topic_tag} #learning #kids #shorts #dookietv",
+                description=mock_desc,
                 tags=["kids", "shorts", "learning", mascot.lower(), topic.lower()],
                 mascot=mascot,
                 topic=topic,
@@ -147,9 +156,9 @@ class ScriptGenerator:
                 subtitles=[
                     SubtitleItem(start=0.0, end=5.0, text="One!"),
                     SubtitleItem(start=5.0, end=8.0, text="Two!"),
-                    SubtitleItem(start=8.0, end=15.0, text="Three!"),
+                    SubtitleItem(start=8.0, end=10.0, text="Three!"),
                 ],
-                total_duration_seconds=15.0,
+                total_duration_seconds=10.0,
             )
             return mock_script, 0.0005
 
@@ -191,23 +200,31 @@ class ScriptGenerator:
                 narration = parsed_json.get("narration_text", f"Let's learn {clean_topic}!")
                 sub_list = [
                     SubtitleItem(start=0.0, end=5.0, text=narration[:30]),
-                    SubtitleItem(start=5.0, end=10.0, text=narration[30:60] if len(narration) > 30 else "Fun learning!"),
-                    SubtitleItem(start=10.0, end=15.0, text="Dookie Tv!"),
+                    SubtitleItem(start=5.0, end=8.0, text=narration[30:60] if len(narration) > 30 else "Fun learning!"),
+                    SubtitleItem(start=8.0, end=10.0, text="Dookie Tv!"),
                 ]
 
             raw_title = parsed_json.get("title", f"{mascot_cap} Short")
             clean_title = raw_title.replace("| Dookie Tv", "").replace("| Dookie TV", "").strip()
 
+            desc = parsed_json.get("description", "")
+            if "New videos coming soon from Dookie Tv" not in desc:
+                desc = (
+                    f"Join {mascot_cap} on Dookie Tv as we learn about {clean_topic}! {mascot_emoji}\n\n"
+                    "New videos coming soon from Dookie Tv — stay tuned for more with Dookie, Mia, and Carrot! 🎨\n\n"
+                    f"#{topic_tag} #learning #kids #shorts #dookietv"
+                )
+
             script = ShortScript(
                 title=clean_title,
-                description=parsed_json.get("description", f"Join {mascot_cap} for fun learning! #{topic_tag} #learning #kids #shorts #dookietv"),
+                description=desc,
                 tags=parsed_json.get("tags", ["kids", "shorts", "learning"]),
                 mascot=mascot,
                 topic=topic,
                 animation_prompt=parsed_json.get("animation_prompt", ""),
                 narration_text=parsed_json.get("narration_text", ""),
                 subtitles=sub_list,
-                total_duration_seconds=float(parsed_json.get("total_duration_seconds", 15.0)),
+                total_duration_seconds=float(parsed_json.get("total_duration_seconds", 10.0)),
             )
             return script, real_cost
         except Exception as e:
