@@ -55,7 +55,7 @@ Audio: Off-screen friendly child narrator voice matching vocal_reference.mp3, up
 ## 5. Example Output Format
 
 ```text
-Medium, 35mm, eye-level, slow push in — Dookie, the boxer puppy mascot from image 1 and image 2, sits happily in a bright playroom with a sunshine yellow background (#FFD166). At 00:02, a glowing 3D red ball pops up beside him, off-screen child voice narrates "Red!". At 00:05, a glowing 3D blue ball pops up, off-screen child voice narrates "Blue!". At 00:08, a glowing 3D pink ball pops up, off-screen child voice narrates "Pink!". Dookie opens his mouth wide at 00:09 and barks happy puppy woofs, mouth movement and barking sound synchronized frame-by-frame. NO on-screen text, NO subtitles, NO AI captions.
+Single continuous one-shot video clip, Medium 35mm lens, eye-level, slow push in — Dookie, the boxer puppy mascot from image 1 and image 2, sits happily in a bright playroom with a sunshine yellow background (#FFD166). At 00:02, a glowing 3D red ball pops up beside him, off-screen child voice narrates "Red!". At 00:05, a glowing 3D blue ball pops up, off-screen child voice narrates "Blue!". At 00:08, a glowing 3D pink ball pops up, off-screen child voice narrates "Pink!". Dookie opens his mouth wide at 00:09 and barks happy puppy woofs, mouth movement and barking sound synchronized frame-by-frame. NO on-screen text, NO subtitles, NO AI captions.
 
 Location: Bright colorful playroom, sunny morning.
 Audio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children's background music matching music_reference.mp3, mascot puppy barks (NO mascot human speech).
