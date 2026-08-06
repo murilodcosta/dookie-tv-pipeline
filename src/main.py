@@ -104,26 +104,36 @@ def run_pipeline():
     r2_url = r2_client.upload_file(local_path=final_video_path, destination_key=r2_destination_key)
 
     # 7. Human Review Gate via Telegram (3.6) & YouTube Upload (3.7)
-    try:
-        approved = telegram.send_video_for_review(
+    telegram.send_video_for_review(
+        video_path=final_video_path,
+        title=script.title,
+        description=script.description,
+        cost=total_estimated_cost,
+        mascot=mascot,
+        topic=topic,
+    )
+
+    if not ENABLE_MEDIA_MOCK:
+        decision = telegram.wait_for_user_decision(timeout_seconds=600)
+    else:
+        decision = "approve"
+
+    if decision == "approve":
+        youtube_url = uploader.upload_short(
             video_path=final_video_path,
             title=script.title,
             description=script.description,
+            tags=script.tags,
+            privacy_status="unlisted",
         )
-        if approved:
-            youtube_url = uploader.upload_short(
-                video_path=final_video_path,
-                title=script.title,
-                description=script.description,
-                tags=script.tags,
-            )
-            status = "approved"
-        else:
-            status = "rejected"
-            youtube_url = None
-    except Exception as review_err:
-        logger.warning(f"Telegram/YouTube review gateway step skipped ({review_err}). Saving video to R2 and logging history.")
-        status = "ready_for_review"
+        status = "approved"
+    elif decision == "reject":
+        logger.info("❌ Video rejected by user via Telegram.")
+        status = "rejected"
+        youtube_url = None
+    else:
+        logger.info(f"🔄 User selected Telegram decision: '{decision}'")
+        status = decision
         youtube_url = None
 
     # 8. Log History & Cost Metrics in SQLite (3.8)

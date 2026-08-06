@@ -2,6 +2,8 @@
 .env
 NOTES.local.md
 CLAUDE.local.md
+config/client_secret.json
+config/youtube_oauth2.json
 
 # Python
 __pycache__/
