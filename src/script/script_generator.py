@@ -80,6 +80,8 @@ class ScriptGenerator:
         mascot_emoji = "🐶" if mascot.lower() == "dookie" else ("🐱" if mascot.lower() == "mia" else "🐰")
         sfx_desc = "happy barks and puppy woofs" if mascot.lower() == "dookie" else ("sweet meows and purrs" if mascot.lower() == "mia" else "soft squeaks and carrot crunching")
 
+        mascot_pronoun = "her" if mascot.lower() == "mia" else "him"
+
         return (
             f"Generate a one-shot continuous Short script (10.0 seconds total) featuring mascot '{mascot_cap}' teaching topic '{clean_topic}'.\n"
             "Respond ONLY with a JSON object containing the following keys:\n"
@@ -88,7 +90,7 @@ class ScriptGenerator:
             '  "description": "Join ' + mascot_cap + ' on Dookie Tv as we learn about ' + clean_topic + '! ' + mascot_emoji + '\\n\\nNew videos coming soon from Dookie Tv — stay tuned for more with Dookie, Mia, and Carrot! 🎨\\n\\n#' + topic + ' #learning #kids #shorts #dookietv",\n'
             '  "tags": ["kids", "shorts", "learning", "' + topic + '", "dookietv"],\n'
             '  "total_duration_seconds": 10.0,\n'
-            '  "animation_prompt": "Medium, 35mm, eye-level, slow push in — ' + mascot_cap + ', the mascot character from image 1 and image 2, sits happily in a bright playroom with a sunshine yellow background (#FFD166). At 00:02, a glowing 3D red ball pops up beside him, off-screen child voice narrates \\"Red!\\". At 00:05, a glowing 3D blue ball pops up, off-screen child voice narrates \\"Blue!\\". At 00:08, a glowing 3D pink ball pops up, off-screen child voice narrates \\"Pink!\\". ' + mascot_cap + ' opens mouth wide at 00:09 and makes ' + sfx_desc + ', mouth movement and sound synchronized frame-by-frame. NO on-screen text, NO subtitles, NO AI captions.\\n\\nLocation: Bright colorful playroom, sunny morning.\\nAudio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children\'s background music matching music_reference.mp3, mascot ' + sfx_desc + ' (NO mascot human speech).",\n'
+            '  "animation_prompt": "Medium, 35mm, eye-level, slow push in — ' + mascot_cap + ', the mascot character from image 1 and image 2, sits happily in a bright playroom with a sunshine yellow background (#FFD166). At 00:02, a glowing 3D red ball pops up beside ' + mascot_pronoun + ', off-screen child voice narrates \\"Red!\\". At 00:05, a glowing 3D blue ball pops up, off-screen child voice narrates \\"Blue!\\". At 00:08, a glowing 3D pink ball pops up, off-screen child voice narrates \\"Pink!\\". ' + mascot_cap + ' opens mouth wide at 00:09 and makes ' + sfx_desc + ', mouth movement and sound synchronized frame-by-frame. NO on-screen text, NO subtitles, NO AI captions.\\n\\nLocation: Bright colorful playroom, sunny morning.\\nAudio: Off-screen friendly child narrator voice matching vocal_reference.mp3, upbeat cheerful children\'s background music matching music_reference.mp3, mascot ' + sfx_desc + ' (NO mascot human speech).",\n'
             '  "narration_text": "Red! Blue! Pink!",\n'
             '  "subtitles": [\n'
             '    {"start": 0.0, "end": 4.0, "text": "Red!"},\n'
