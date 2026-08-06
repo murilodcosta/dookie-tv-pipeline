@@ -77,7 +77,7 @@ class MediaGenerator:
                 f.write(b"MOCK_SEGMIND_SEEDANCE_VIDEO_DATA")
             return output_path
 
-        logger.info(f"Connecting to Segmind Seedance 2.0 API for mascot '{mascot}' (Full HD 1080p, Multi-Shot 12-15s)...")
+        logger.info(f"Connecting to Segmind Seedance 2.0 API for mascot '{mascot}' (HD 720p, Multi-Shot 10s, Budget: $1.51 USD)...")
         headers = {
             "x-api-key": self.api_key,
             "Content-Type": "application/json",

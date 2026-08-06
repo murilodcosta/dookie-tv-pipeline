@@ -83,10 +83,23 @@ class DatabaseManager:
         self, available_topics: List[str], available_mascots: List[str], override_mascot: Optional[str] = None
     ) -> Tuple[str, str]:
         """
-        Selects a mascot and topic respecting the 7-day no-repeat rule, with optional manual override.
+        Selects a mascot and topic respecting round-robin mascot rotation and the 7-day no-repeat rule.
         """
-        target_mascot = override_mascot if override_mascot else available_mascots[0]
-        
+        if override_mascot:
+            target_mascot = override_mascot
+        else:
+            # Query last used mascot from video_history to rotate (dookie -> mia -> carrot -> dookie)
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT mascot FROM video_history ORDER BY id DESC LIMIT 1;")
+                row = cursor.fetchone()
+                if row and row[0] in available_mascots:
+                    last_mascot = row[0]
+                    last_idx = available_mascots.index(last_mascot)
+                    target_mascot = available_mascots[(last_idx + 1) % len(available_mascots)]
+                else:
+                    target_mascot = available_mascots[0]
+
         for topic in available_topics:
             if self.is_topic_valid_for_mascot(topic, target_mascot):
                 return target_mascot, topic

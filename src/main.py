@@ -113,7 +113,7 @@ def run_pipeline():
         topic=topic,
     )
 
-    if not ENABLE_MEDIA_MOCK:
+    if not mock_mode:
         decision = telegram.wait_for_user_decision(timeout_seconds=600)
     else:
         decision = "approve"
