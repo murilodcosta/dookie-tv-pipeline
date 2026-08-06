@@ -68,7 +68,7 @@ class YouTubeUploader:
         title: str,
         description: str,
         tags: List[str],
-        privacy_status: str = "unlisted",
+        privacy_status: str = "public",
     ) -> str:
         """
         Uploads an approved Short to YouTube with madeForKids=True setting.

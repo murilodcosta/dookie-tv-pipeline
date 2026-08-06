@@ -124,7 +124,7 @@ def run_pipeline():
             title=script.title,
             description=script.description,
             tags=script.tags,
-            privacy_status="unlisted",
+            privacy_status="public",
         )
         status = "approved"
     elif decision == "reject":
