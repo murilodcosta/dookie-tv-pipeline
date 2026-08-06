@@ -14,7 +14,10 @@ Every prompt must reference `image 1 and image 2` for mascot visual binding:
 - **Carrot**: `Carrot, the orange bunny mascot character from image 1 and image 2...`
 
 **Styling Directives**:
-- 3D Pixar animated cartoon style, stylized cute 3D character, smooth 3D render.
+- Masterpiece 3D Pixar animated feature-film cartoon style, Octane Render 3D aesthetic, stylized cute 3D character design, ultra-clean smooth 3D render.
+- **Lighting & Shaders**: Warm studio key lighting, soft rim lighting highlights along character coat/fur, subsurface scattering (SSS) shader, ray-traced ambient occlusion, soft depth of field (DoF).
+- **Textures & Details**: Expressive glossy 3D eyes, high-detail clean stylized textures, smooth Sunshine Yellow (`#FFD166`) playroom environment, reflective 3D toys.
+- **Motion & Physics**: Fluid 60fps Pixar character movement, natural secondary motion on ears/tail, bouncy animation timing, zero flickering, zero visual artifacts.
 - Palette: Sunshine Yellow `#FFD166` (60% background), Sky Blue `#4EA8DE` (30% secondary), Bubblegum Pink `#EF476F` (10% action/pops).
 - NO photo-realistic animals, NO live-action, NO 2D flat drawings.
 
