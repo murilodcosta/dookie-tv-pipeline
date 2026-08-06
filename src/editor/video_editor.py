@@ -4,6 +4,7 @@ Uses Fredoka-SemiBold.ttf for ASS burned animated subtitles.
 """
 
 import os
+import shutil
 import logging
 import subprocess
 import requests
@@ -160,8 +161,16 @@ class VideoEditor:
         escaped_ass = ass_path.replace("\\", "/").replace(":", "\\:")
         escaped_font = FONT_PATH.replace("\\", "/").replace(":", "\\:")
 
+        ffmpeg_bin = "ffmpeg"
+        if not shutil.which("ffmpeg"):
+            try:
+                import imageio_ffmpeg
+                ffmpeg_bin = imageio_ffmpeg.get_ffmpeg_exe()
+            except Exception:
+                pass
+
         cmd = [
-            "ffmpeg", "-y",
+            ffmpeg_bin, "-y",
             "-i", input_video,
             "-vf", f"subtitles='{escaped_ass}':fontsdir='{os.path.dirname(escaped_font)}'",
             "-c:v", "libx264",
